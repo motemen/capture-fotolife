@@ -6,8 +6,8 @@ using System.Drawing.Drawing2D;
 //using System.Runtime.InteropServices;
 using System.IO;
 
-class HelloClass : Form {
-    HelloClass() {
+class CaptureFotolife : Form {
+    CaptureFotolife() {
         this.TopMost         = true;
         this.FormBorderStyle = FormBorderStyle.None;
         this.ShowInTaskbar   = false;
@@ -88,6 +88,6 @@ class HelloClass : Form {
     }
 
     static void Main() {
-        Application.Run(new HelloClass());
+        Application.Run(new CaptureFotolife());
     }
 }
