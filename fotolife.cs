@@ -3,13 +3,14 @@ using System.Windows.Forms;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Drawing.Drawing2D;
-using System.Runtime.InteropServices;
+//using System.Runtime.InteropServices;
+using System.IO;
 
 class HelloClass : Form {
     HelloClass() {
-        this.TopMost = true;
+        this.TopMost         = true;
         this.FormBorderStyle = FormBorderStyle.None;
-        this.ShowInTaskbar = false;
+        this.ShowInTaskbar   = false;
     }
 
     private Bitmap CaptureScreen() {
@@ -18,6 +19,13 @@ class HelloClass : Form {
         gCapture.CopyFromScreen(rectCapture.Location, Point.Empty, rectCapture.Size);
         gCapture.Dispose();
         return bmpCapture;
+    }
+
+    private String SaveTemporary(Bitmap bitmap) {
+        String fileTemp = Path.ChangeExtension(Path.GetTempFileName(), "png");
+        bitmap.Save(fileTemp, ImageFormat.Png);
+        Console.WriteLine(fileTemp);
+        return fileTemp;
     }
 
     protected override CreateParams CreateParams {
@@ -52,9 +60,9 @@ class HelloClass : Form {
 
         ControlPaint.DrawReversibleFrame(rectCapture, Color.Black, FrameStyle.Dashed);
 
-        Bitmap bmpCapture = CaptureScreen();
-        bmpCapture.Save("C:\\tmp\\hoge.bmp");
-        //UploadFotolife();
+        Bitmap bmpCapture   = CaptureScreen();
+        String fileCaptured = SaveTemporary(bmpCapture);
+        //UploadFotolife(fileCaptured);
         Application.Exit();
 
     }
