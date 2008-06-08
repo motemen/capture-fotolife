@@ -5,15 +5,22 @@ using System.Drawing.Imaging;
 using System.Drawing.Drawing2D;
 //using System.Runtime.InteropServices;
 using System.IO;
+using System.Net;
 
 class CaptureFotolife : Form {
+    static string FOTOLIFE_POST_URL = "http://f.hatena.ne.jp/{0}/up";
+
+    Rectangle rectCapture;
+    Point ptMouseDown;
+    bool isMouseDown = false;
+
     CaptureFotolife() {
         this.TopMost         = true;
         this.FormBorderStyle = FormBorderStyle.None;
         this.ShowInTaskbar   = false;
     }
 
-    private Bitmap CaptureScreen() {
+    Bitmap CaptureScreen() {
         Bitmap bmpCapture = new Bitmap(rectCapture.Width, rectCapture.Height);
         Graphics gCapture = Graphics.FromImage(bmpCapture);
         gCapture.CopyFromScreen(rectCapture.Location, Point.Empty, rectCapture.Size);
@@ -21,11 +28,17 @@ class CaptureFotolife : Form {
         return bmpCapture;
     }
 
-    private String SaveTemporary(Bitmap bitmap) {
+    String SaveTemporary(Bitmap bitmap) {
         String fileTemp = Path.ChangeExtension(Path.GetTempFileName(), "png");
         bitmap.Save(fileTemp, ImageFormat.Png);
         Console.WriteLine(fileTemp);
         return fileTemp;
+    }
+
+    bool UploadFotolife(String filepath) {
+        WebClient client = new WebClient();
+        //client.UploadValues(FOTOLIFE_POST_URL, nameValueCollection);
+        return false;
     }
 
     protected override CreateParams CreateParams {
@@ -33,18 +46,14 @@ class CaptureFotolife : Form {
             Rectangle screenRect = SystemInformation.VirtualScreen;
 
             CreateParams createParams = base.CreateParams;
-            createParams.X = screenRect.Left;
-            createParams.Y = screenRect.Top;
-            createParams.Width = screenRect.Width;
+            createParams.X      = screenRect.Left;
+            createParams.Y      = screenRect.Top;
+            createParams.Width  = screenRect.Width;
             createParams.Height = screenRect.Height;
 
             return createParams;
         }
     }
-
-    private Rectangle rectCapture;
-    private Point ptMouseDown;
-    private bool isMouseDown = false;
 
     protected override void OnMouseDown(MouseEventArgs e) {
         isMouseDown = true;
@@ -81,11 +90,9 @@ class CaptureFotolife : Form {
         ControlPaint.DrawReversibleFrame(rectCapture, Color.Black, FrameStyle.Dashed);
     }
 
-    protected override void OnPaint(PaintEventArgs e) {
-    }
+    protected override void OnPaint(PaintEventArgs e) { }
 
-    protected override void OnPaintBackground(PaintEventArgs e) {
-    }
+    protected override void OnPaintBackground(PaintEventArgs e) { }
 
     static void Main() {
         Application.Run(new CaptureFotolife());
