@@ -6,9 +6,12 @@ using System.Drawing.Drawing2D;
 //using System.Runtime.InteropServices;
 using System.IO;
 using System.Net;
+using System.Collections.Specialized;
+using System.Text;
 
 class CaptureFotolife : Form {
-    static string FOTOLIFE_POST_URL = "http://f.hatena.ne.jp/{0}/up";
+    //static string FOTOLIFE_POST_URL = "http://f.hatena.ne.jp/{0}/up";
+    static string FOTOLIFE_POST_URL = "http://localhost/";
 
     Rectangle rectCapture;
     Point ptMouseDown;
@@ -36,8 +39,43 @@ class CaptureFotolife : Form {
     }
 
     bool UploadFotolife(String filepath) {
-        WebClient client = new WebClient();
-        //client.UploadValues(FOTOLIFE_POST_URL, nameValueCollection);
+        string BOUNDARY = "-----------------------------FOTOLIFEBOUNDARY";
+
+        HttpWebRequest request = (HttpWebRequest)WebRequest.Create(FOTOLIFE_POST_URL);
+        request.Method = "POST";
+        request.ContentType = String.Format("multipart/form-data; boundary={0}", BOUNDARY);
+
+        StringBuilder contentBuilder = new StringBuilder();
+        contentBuilder.Append("--").Append(BOUNDARY).Append("\r\n");
+        contentBuilder.Append(String.Format(@"Content-Disposition: form-data; name=""file""; filename=""{0}""", Path.GetFileName(filepath)))
+                      .Append("\r\n");
+        contentBuilder.Append("Content-Type: image/png\r\n");
+        contentBuilder.Append("\r\n");
+        using (StreamReader fileReader = new StreamReader(filepath, Encoding.ASCII)) {
+            contentBuilder.Append(fileReader.ReadToEnd());
+            contentBuilder.Append("\r\n");
+        }
+        contentBuilder.Append("--").Append(BOUNDARY).Append("--").Append("\r\n");
+        byte[] requestContent = Encoding.ASCII.GetBytes(contentBuilder.ToString());
+        Console.WriteLine(contentBuilder);
+
+        request.ContentLength = requestContent.Length;
+        request.ProtocolVersion = HttpVersion.Version10;
+
+        using (Stream requestStream = request.GetRequestStream()) {
+            requestStream.Write(requestContent, 0, requestContent.Length);
+        }
+
+        try {
+            using (WebResponse response = request.GetResponse()) {
+                foreach (string key in response.Headers.AllKeys) {
+                  Console.WriteLine("[{0}]\n\t{1}", key, response.Headers[key]);
+                }
+            }
+        } catch (Exception e) {
+            Console.WriteLine(e);
+        }
+
         return false;
     }
 
@@ -72,6 +110,7 @@ class CaptureFotolife : Form {
         Bitmap bmpCapture   = CaptureScreen();
         String fileCaptured = SaveTemporary(bmpCapture);
         //UploadFotolife(fileCaptured);
+        UploadFotolife(@"C:\tmp\hoge.hs");
         Application.Exit();
 
     }
