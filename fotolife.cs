@@ -43,7 +43,7 @@ class CaptureFotolife : Form {
         return fileTemp;
     }
 
-    bool LoginHatena(string username, string password) {
+    string LoginHatena(string username, string password) {
         this.cookieContainer = new CookieContainer();
 
         HttpWebRequest request = (HttpWebRequest)WebRequest.Create(HATENA_LOGIN_URL);
@@ -60,29 +60,18 @@ class CaptureFotolife : Form {
         request.GetResponse();
 
         foreach (Cookie c in this.cookieContainer.GetCookies(new Uri("http://f.hatena.ne.jp"))) {
-            Console.WriteLine(c);
+            if (c.Name == "rk") {
+                return c.Value;
+            }
         }
 
-        return true;
-    }
-
-    void Write(Stream stream, string s) {
-        byte[] bytes = Encoding.ASCII.GetBytes(s);
-        stream.Write(bytes, 0, s.Length);
+        throw new System.Exception("Could not login");
     }
 
     bool UploadFotolife(String filepath) {
-        LoginHatena("motemen", "QgXnG6b7");
 
-        string BOUNDARY = "-----------------------------FOTOLIFEBOUNDARY";
+        const string BOUNDARY = "-----------------------------FOTOLIFEBOUNDARY";
 
-        string rk = "";
-        foreach (Cookie c in this.cookieContainer.GetCookies(new Uri("http://f.hatena.ne.jp"))) {
-            if (c.Name == "rk") {
-                rk = c.Value;
-                break;
-            }
-        }
         MD5 md5 = MD5.Create();
         byte[] md5hash = md5.ComputeHash(Encoding.ASCII.GetBytes(rk));
         string rkm = System.Convert.ToBase64String(md5hash).Replace("=", "");
@@ -95,12 +84,6 @@ class CaptureFotolife : Form {
 
         using (Stream requestStream = request.GetRequestStream()) {
             using (StreamWriter requestStreamWriter = new StreamWriter(requestStream)) {
-                Func<string, bool> WriteToStream = s => {
-                    byte[] bytes = Encoding.ASCII.GetBytes(s);
-                    requestStream.Write(bytes, 0, bytes.Length);
-                    return true;
-                };
-
                 requestStreamWriter.Write(String.Format("--{0}\r\n", BOUNDARY));
 
                 requestStreamWriter.Write(String.Format(@"Content-Disposition: form-data; name=""image1""; filename=""{0}""" + "\r\n", Path.GetFileName(filepath)));
