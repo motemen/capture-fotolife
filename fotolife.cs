@@ -72,6 +72,7 @@ class CaptureFotolife : Form {
     }
 
     bool UploadFotolife(String filepath) {
+        LoginHatena("motemen", "QgXnG6b7");
 
         string BOUNDARY = "-----------------------------FOTOLIFEBOUNDARY";
 
@@ -93,63 +94,45 @@ class CaptureFotolife : Form {
         request.ContentType = String.Format("multipart/form-data; boundary={0}", BOUNDARY);
 
         using (Stream requestStream = request.GetRequestStream()) {
-            Func<string, bool> WriteToStream = s => {
-                byte[] bytes = Encoding.ASCII.GetBytes(s);
-                requestStream.Write(bytes, 0, bytes.Length);
-                return true;
-            };
+            using (StreamWriter requestStreamWriter = new StreamWriter(requestStream)) {
+                Func<string, bool> WriteToStream = s => {
+                    byte[] bytes = Encoding.ASCII.GetBytes(s);
+                    requestStream.Write(bytes, 0, bytes.Length);
+                    return true;
+                };
 
-            StringBuilder contentBuilder = new StringBuilder();
-            WriteToStream("--");
-            WriteToStream(BOUNDARY);
-            WriteToStream("\r\n");
+                requestStreamWriter.Write(String.Format("--{0}\r\n", BOUNDARY));
 
-            WriteToStream(String.Format(@"Content-Disposition: form-data; name=""image1""; filename=""{0}""", Path.GetFileName(filepath)));
-            WriteToStream("\r\n");
-            WriteToStream("Content-Type: image/png\r\n");
-            WriteToStream("\r\n");
-            Console.WriteLine(filepath);
-            using (FileStream fileStream = new FileStream(filepath, FileMode.Open)) {
-                int fileSize = (int)fileStream.Length;
-                Console.WriteLine(fileSize);
-                byte[] fileContent = new byte[fileSize];
-                fileStream.Read(fileContent, 0, fileSize);
-                requestStream.Write(fileContent, 0, fileContent.Length);
-                WriteToStream("\r\n");
-            }
+                requestStreamWriter.Write(String.Format(@"Content-Disposition: form-data; name=""image1""; filename=""{0}""" + "\r\n", Path.GetFileName(filepath)));
+                requestStreamWriter.Write("Content-Type: image/png\r\n");
+                requestStreamWriter.Write("\r\n");
+                requestStreamWriter.Flush();
 
-            WriteToStream("--");
-            WriteToStream(BOUNDARY);
-            WriteToStream("\r\n");
-            WriteToStream(@"Content-Disposition: form-data; name=""mode""");
-            WriteToStream("\r\n");
-            WriteToStream("\r\n");
-            WriteToStream("enter\r\n");
+                using (FileStream fileStream = new FileStream(filepath, FileMode.Open)) {
+                    int fileSize = (int)fileStream.Length;
+                    byte[] fileContent = new byte[fileSize];
+                    fileStream.Read(fileContent, 0, fileSize);
+                    requestStream.Write(fileContent, 0, fileContent.Length);
+                    requestStreamWriter.Write("\r\n");
+                }
 
-            WriteToStream("--");
-            WriteToStream(BOUNDARY);
-            WriteToStream("\r\n");
-            WriteToStream(@"Content-Disposition: form-data; name=""rkm""");
-            WriteToStream("\r\n");
-            WriteToStream("\r\n");
-            WriteToStream(rkm);
-            WriteToStream("\r\n");
+                requestStreamWriter.Write(String.Format("--{0}\r\n", BOUNDARY));
+                requestStreamWriter.Write(@"Content-Disposition: form-data; name=""mode""" + "\r\n");
+                requestStreamWriter.Write("\r\n");
+                requestStreamWriter.Write("enter\r\n");
 
-            WriteToStream("--");
-            WriteToStream(BOUNDARY);
-            WriteToStream("--");
-            WriteToStream("\r\n");
-            //byte[] requestContent = Encoding.ASCII.GetBytes(contentBuilder.ToString());
+                requestStreamWriter.Write(String.Format("--{0}\r\n", BOUNDARY));
+                requestStreamWriter.Write(@"Content-Disposition: form-data; name=""rkm""" + "\r\n");
+                requestStreamWriter.Write("\r\n");
+                requestStreamWriter.Write(String.Format("{0}\r\n", rkm));
 
-            //request.ContentLength = requestContent.Length;
-            request.ProtocolVersion = HttpVersion.Version10;
-
-            //requestStream.Write(requestContent, 0, requestContent.Length);
+                requestStreamWriter.Write(String.Format("--{0}--\r\n", BOUNDARY));
         }
 
         request.GetResponse();
 
         return false;
+        }
     }
 
     protected override CreateParams CreateParams {
