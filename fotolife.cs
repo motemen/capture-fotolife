@@ -12,8 +12,8 @@ using System.Security.Cryptography;
 
 class CaptureFotolife : Form {
     static string HATENA_LOGIN_URL  = "http://www.hatena.ne.jp/login";
-    //static string FOTOLIFE_POST_URL = "http://f.hatena.ne.jp/motemen/up";
-    static string FOTOLIFE_POST_URL = "http://flocal.hatena.ne.jp:3000/motemen/up";
+    static string FOTOLIFE_POST_URL = "http://f.hatena.ne.jp/motemen/up";
+    //static string FOTOLIFE_POST_URL = "http://flocal.hatena.ne.jp:3000/motemen/up";
     //static string FOTOLIFE_POST_URL = "http://localhost/";
 
     Rectangle rectCapture;
@@ -31,7 +31,7 @@ class CaptureFotolife : Form {
     Bitmap CaptureScreen() {
         Bitmap bmpCapture = new Bitmap(rectCapture.Width, rectCapture.Height);
         Graphics gCapture = Graphics.FromImage(bmpCapture);
-        gCapture.CopyFromScreen(rectCapture.Location, Point.Empty, rectCapture.Size);
+        gCapture.CopyFromScreen(this.RectangleToScreen(rectCapture).Location, Point.Empty, rectCapture.Size);
         gCapture.Dispose();
         return bmpCapture;
     }
@@ -50,10 +50,6 @@ class CaptureFotolife : Form {
         request.Method = "POST";
         request.CookieContainer = this.cookieContainer;
 
-        //WebProxy proxy = new WebProxy();
-        //proxy.Address = new Uri("http://localhost:8080/");
-        //request.Proxy = proxy;
-
         byte[] requestContent = Encoding.ASCII.GetBytes(
             String.Format("name={0}&password={1}", username, password)
         );
@@ -70,7 +66,13 @@ class CaptureFotolife : Form {
         return true;
     }
 
+    void Write(Stream stream, string s) {
+        byte[] bytes = Encoding.ASCII.GetBytes(s);
+        stream.Write(bytes, 0, s.Length);
+    }
+
     bool UploadFotolife(String filepath) {
+
         string BOUNDARY = "-----------------------------FOTOLIFEBOUNDARY";
 
         string rk = "";
@@ -90,48 +92,62 @@ class CaptureFotolife : Form {
         request.CookieContainer = this.cookieContainer;
         request.ContentType = String.Format("multipart/form-data; boundary={0}", BOUNDARY);
 
-        //WebProxy proxy = new WebProxy();
-        //proxy.Address = new Uri("http://localhost:8080/");
-        //request.Proxy = proxy;
-
-        StringBuilder contentBuilder = new StringBuilder();
-        contentBuilder.Append("--").Append(BOUNDARY).Append("\r\n");
-        contentBuilder.Append(String.Format(@"Content-Disposition: form-data; name=""image1""; filename=""{0}""", Path.GetFileName(filepath)))
-                      .Append("\r\n");
-        contentBuilder.Append("Content-Type: image/png\r\n");
-        contentBuilder.Append("\r\n");
-        Console.WriteLine(filepath);
-        //using (StreamReader fileReader = new StreamReader(filepath, Encoding.ASCII)) {
-        //    contentBuilder.Append(fileReader.ReadToEnd()).Append("\r\n");
-        //}
-        using (FileStream fileStream = new FileStream(filepath, FileMode.Open)) {
-            int fileSize = (int)fileStream.Length;
-            Console.WriteLine(fileSize);
-            byte[] fileContent = new byte[fileSize];
-            fileStream.Read(fileContent, 0, fileSize);
-            contentBuilder.Append(Encoding.Unicode.GetString(fileContent));
-            contentBuilder.Append("\r\n");
-        }
-
-        contentBuilder.Append("--").Append(BOUNDARY).Append("\r\n");
-        contentBuilder.Append(@"Content-Disposition: form-data; name=""mode""").Append("\r\n");
-        contentBuilder.Append("\r\n");
-        contentBuilder.Append("enter\r\n");
-
-        contentBuilder.Append("--").Append(BOUNDARY).Append("\r\n");
-        contentBuilder.Append(@"Content-Disposition: form-data; name=""rkm""").Append("\r\n");
-        contentBuilder.Append("\r\n");
-        contentBuilder.Append(rkm).Append("\r\n");
-
-        contentBuilder.Append("--").Append(BOUNDARY).Append("--").Append("\r\n");
-        byte[] requestContent = Encoding.ASCII.GetBytes(contentBuilder.ToString());
-
-        request.ContentLength = requestContent.Length;
-        request.ProtocolVersion = HttpVersion.Version10;
-
         using (Stream requestStream = request.GetRequestStream()) {
-            requestStream.Write(requestContent, 0, requestContent.Length);
+            Func<string, bool> WriteToStream = s => {
+                byte[] bytes = Encoding.ASCII.GetBytes(s);
+                requestStream.Write(bytes, 0, bytes.Length);
+                return true;
+            };
+
+            StringBuilder contentBuilder = new StringBuilder();
+            WriteToStream("--");
+            WriteToStream(BOUNDARY);
+            WriteToStream("\r\n");
+
+            WriteToStream(String.Format(@"Content-Disposition: form-data; name=""image1""; filename=""{0}""", Path.GetFileName(filepath)));
+            WriteToStream("\r\n");
+            WriteToStream("Content-Type: image/png\r\n");
+            WriteToStream("\r\n");
+            Console.WriteLine(filepath);
+            using (FileStream fileStream = new FileStream(filepath, FileMode.Open)) {
+                int fileSize = (int)fileStream.Length;
+                Console.WriteLine(fileSize);
+                byte[] fileContent = new byte[fileSize];
+                fileStream.Read(fileContent, 0, fileSize);
+                requestStream.Write(fileContent, 0, fileContent.Length);
+                WriteToStream("\r\n");
+            }
+
+            WriteToStream("--");
+            WriteToStream(BOUNDARY);
+            WriteToStream("\r\n");
+            WriteToStream(@"Content-Disposition: form-data; name=""mode""");
+            WriteToStream("\r\n");
+            WriteToStream("\r\n");
+            WriteToStream("enter\r\n");
+
+            WriteToStream("--");
+            WriteToStream(BOUNDARY);
+            WriteToStream("\r\n");
+            WriteToStream(@"Content-Disposition: form-data; name=""rkm""");
+            WriteToStream("\r\n");
+            WriteToStream("\r\n");
+            WriteToStream(rkm);
+            WriteToStream("\r\n");
+
+            WriteToStream("--");
+            WriteToStream(BOUNDARY);
+            WriteToStream("--");
+            WriteToStream("\r\n");
+            //byte[] requestContent = Encoding.ASCII.GetBytes(contentBuilder.ToString());
+
+            //request.ContentLength = requestContent.Length;
+            request.ProtocolVersion = HttpVersion.Version10;
+
+            //requestStream.Write(requestContent, 0, requestContent.Length);
         }
+
+        request.GetResponse();
 
         return false;
     }
