@@ -13,9 +13,7 @@ using System.Xml.Serialization;
 
 class CaptureFotolife : Form {
     static string HATENA_LOGIN_URL  = "http://www.hatena.ne.jp/login";
-    static string FOTOLIFE_POST_URL = "http://f.hatena.ne.jp/motemen/up";
-    //static string FOTOLIFE_POST_URL = "http://flocal.hatena.ne.jp:3000/motemen/up";
-    //static string FOTOLIFE_POST_URL = "http://localhost/";
+    static string FOTOLIFE_POST_URL = "http://f.hatena.ne.jp/{0}/up";
 
     Rectangle rectCapture;
     Point ptMouseDown;
@@ -92,15 +90,16 @@ class CaptureFotolife : Form {
     }
 
     bool UploadFotolife(String filepath) {
+        string username, password;
+        using (StreamReader reader = new StreamReader("login")) {
+            username = reader.ReadLine();
+            password = reader.ReadLine();
+        }
         string rk = RestoreRK();
 
         if (rk == null) {
-            using (StreamReader reader = new StreamReader("login")) {
-                string username = reader.ReadLine();
-                string password = reader.ReadLine();
-                rk = LoginHatena(username, password);
-                StoreRK(rk);
-            }
+            rk = LoginHatena(username, password);
+            StoreRK(rk);
         } else {
             this.cookieContainer.SetCookies(new Uri("http://f.hatena.ne.jp"), String.Format("rk={0}", rk));
         }
@@ -114,7 +113,7 @@ class CaptureFotolife : Form {
         string rkm = System.Convert.ToBase64String(md5hash).Replace("=", "");
         Console.WriteLine(rkm);
 
-        HttpWebRequest request = (HttpWebRequest)WebRequest.Create(FOTOLIFE_POST_URL);
+        HttpWebRequest request = (HttpWebRequest)WebRequest.Create(String.Format(FOTOLIFE_POST_URL, username));
         request.Method = "POST";
         request.CookieContainer = this.cookieContainer;
         request.AllowAutoRedirect = false;
