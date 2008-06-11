@@ -29,6 +29,10 @@ class CaptureFotolife : Form {
     }
 
     Bitmap CaptureScreen() {
+        if (rectCapture.Width == 0 || rectCapture.Height == 0) {
+            return null;
+        }
+
         Bitmap bmpCapture = new Bitmap(rectCapture.Width, rectCapture.Height);
         Graphics gCapture = Graphics.FromImage(bmpCapture);
         gCapture.CopyFromScreen(this.RectangleToScreen(rectCapture).Location, Point.Empty, rectCapture.Size);
@@ -171,6 +175,10 @@ class CaptureFotolife : Form {
     }
 
     protected override void OnMouseDown(MouseEventArgs e) {
+        if (e.Button == MouseButtons.Right) {
+            Application.Exit();
+        }
+
         isMouseDown = true;
         rectCapture.X = e.X;
         rectCapture.Y = e.Y;
@@ -185,12 +193,12 @@ class CaptureFotolife : Form {
         ControlPaint.DrawReversibleFrame(this.RectangleToScreen(rectCapture), Color.Black, FrameStyle.Dashed);
 
         this.Visible = false;
-        Console.WriteLine("CaptureScreen");
-        Bitmap bmpCapture   = CaptureScreen();
-        Console.WriteLine("SaveTemporary");
-        String fileCaptured = SaveTemporary(bmpCapture);
-        Console.WriteLine("UploadFotolife");
-        UploadFotolife(fileCaptured);
+
+        Bitmap bmpCapture = CaptureScreen();
+        if (bmpCapture != null) {
+            String fileCaptured = SaveTemporary(bmpCapture);
+            UploadFotolife(fileCaptured);
+        }
         Application.Exit();
 
     }
