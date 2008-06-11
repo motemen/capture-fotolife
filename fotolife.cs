@@ -1,15 +1,8 @@
 using System;
 using System.Windows.Forms;
 using System.Drawing;
-using System.Drawing.Imaging;
-using System.Drawing.Drawing2D;
-//using System.Runtime.InteropServices;
 using System.IO;
 using System.Net;
-using System.Collections.Specialized;
-using System.Text;
-using System.Security.Cryptography;
-using System.Xml.Serialization;
 
 class CaptureFotolife : Form {
     static string HATENA_LOGIN_URL  = "http://www.hatena.ne.jp/login";
@@ -40,9 +33,9 @@ class CaptureFotolife : Form {
         return bmpCapture;
     }
 
-    String SaveTemporary(Bitmap bitmap) {
-        String fileTemp = Path.ChangeExtension(Path.GetTempFileName(), "png");
-        bitmap.Save(fileTemp, ImageFormat.Png);
+    string SaveTemporary(Bitmap bitmap) {
+        string fileTemp = Path.ChangeExtension(Path.GetTempFileName(), "png");
+        bitmap.Save(fileTemp, System.Drawing.Imaging.ImageFormat.Png);
         Console.WriteLine(fileTemp);
         return fileTemp;
     }
@@ -55,7 +48,7 @@ class CaptureFotolife : Form {
         request.CookieContainer = this.cookieContainer;
         request.AllowAutoRedirect = false;
 
-        byte[] requestContent = Encoding.ASCII.GetBytes(
+        byte[] requestContent = System.Text.Encoding.ASCII.GetBytes(
             String.Format("name={0}&password={1}&persistent=1", username, password)
         );
         using (Stream requestStream = request.GetRequestStream()) {
@@ -93,7 +86,7 @@ class CaptureFotolife : Form {
         }
     }
 
-    bool UploadFotolife(String filepath) {
+    bool UploadFotolife(string filepath) {
         string username, password;
         using (StreamReader reader = new StreamReader("login")) {
             username = reader.ReadLine();
@@ -112,8 +105,8 @@ class CaptureFotolife : Form {
 
         const string BOUNDARY = "-----------------------------FOTOLIFEBOUNDARY";
 
-        MD5 md5 = MD5.Create();
-        byte[] md5hash = md5.ComputeHash(Encoding.ASCII.GetBytes(rk));
+        System.Security.Cryptography.MD5 md5 = System.Security.Cryptography.MD5.Create();
+        byte[] md5hash = md5.ComputeHash(System.Text.Encoding.ASCII.GetBytes(rk));
         string rkm = System.Convert.ToBase64String(md5hash).Replace("=", "");
         Console.WriteLine(rkm);
 
