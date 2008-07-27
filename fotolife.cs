@@ -1,8 +1,8 @@
 using System;
-using System.Windows.Forms;
-using System.Drawing;
 using System.IO;
 using System.Net;
+using System.Drawing;
+using System.Windows.Forms;
 
 class CaptureFotolife : Form {
     static string HATENA_LOGIN_URL  = "http://www.hatena.ne.jp/login";
@@ -27,9 +27,9 @@ class CaptureFotolife : Form {
         }
 
         Bitmap bmpCapture = new Bitmap(rectCapture.Width, rectCapture.Height);
-        Graphics gCapture = Graphics.FromImage(bmpCapture);
-        gCapture.CopyFromScreen(this.RectangleToScreen(rectCapture).Location, Point.Empty, rectCapture.Size);
-        gCapture.Dispose();
+        using (Graphics gCapture = Graphics.FromImage(bmpCapture)) {
+            gCapture.CopyFromScreen(this.RectangleToScreen(rectCapture).Location, Point.Empty, rectCapture.Size);
+        }
         return bmpCapture;
     }
 
@@ -48,10 +48,10 @@ class CaptureFotolife : Form {
         request.CookieContainer = this.cookieContainer;
         request.AllowAutoRedirect = false;
 
-        byte[] requestContent = System.Text.Encoding.ASCII.GetBytes(
-            String.Format("name={0}&password={1}&persistent=1", username, password)
-        );
         using (Stream requestStream = request.GetRequestStream()) {
+            byte[] requestContent = System.Text.Encoding.ASCII.GetBytes(
+                String.Format("name={0}&password={1}&persistent=1", username, password)
+            );
             requestStream.Write(requestContent, 0, requestContent.Length);
         }
 
@@ -145,11 +145,11 @@ class CaptureFotolife : Form {
                 requestStreamWriter.Write(String.Format("{0}\r\n", rkm));
 
                 requestStreamWriter.Write(String.Format("--{0}--\r\n", BOUNDARY));
-        }
+            }
 
-        request.GetResponse();
+            request.GetResponse();
 
-        return false;
+            return false;
         }
     }
 
