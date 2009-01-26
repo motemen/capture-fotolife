@@ -1,12 +1,19 @@
 using System;
+using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Net;
-using System.Drawing;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
 class CaptureFotolife : Form {
     static string HATENA_LOGIN_URL  = "http://www.hatena.ne.jp/login";
     static string FOTOLIFE_POST_URL = "http://f.hatena.ne.jp/{0}/up";
+
+    string username;
+    string password;
 
     Rectangle rectCapture;
     Point ptMouseDown;
@@ -14,11 +21,13 @@ class CaptureFotolife : Form {
 
     CookieContainer cookieContainer;
 
-    CaptureFotolife() {
+    CaptureFotolife(string username, string password) {
         this.TopMost         = true;
         this.FormBorderStyle = FormBorderStyle.None;
         this.ShowInTaskbar   = false;
         this.cookieContainer = new CookieContainer();
+        this.username = username;
+        this.password = password;
     }
 
     Bitmap CaptureScreen() {
@@ -28,7 +37,9 @@ class CaptureFotolife : Form {
 
         Bitmap bmpCapture = new Bitmap(rectCapture.Width, rectCapture.Height);
         using (Graphics gCapture = Graphics.FromImage(bmpCapture)) {
-            gCapture.CopyFromScreen(this.RectangleToScreen(rectCapture).Location, Point.Empty, rectCapture.Size);
+            gCapture.CopyFromScreen(
+                this.RectangleToScreen(rectCapture).Location, Point.Empty, rectCapture.Size
+            );
         }
         return bmpCapture;
     }
@@ -36,13 +47,10 @@ class CaptureFotolife : Form {
     string SaveTemporary(Bitmap bitmap) {
         string fileTemp = Path.ChangeExtension(Path.GetTempFileName(), "png");
         bitmap.Save(fileTemp, System.Drawing.Imaging.ImageFormat.Png);
-        Console.WriteLine(fileTemp);
         return fileTemp;
     }
 
     string LoginHatena(string username, string password) {
-        Console.WriteLine("LoginHatena");
-
         HttpWebRequest request = (HttpWebRequest)WebRequest.Create(HATENA_LOGIN_URL);
         request.Method = "POST";
         request.CookieContainer = this.cookieContainer;
@@ -66,54 +74,16 @@ class CaptureFotolife : Form {
         throw new System.Exception("Could not login");
     }
 
-    string RestoreRK() {
-        Console.WriteLine("RestoreRK");
-        try {
-            using (StreamReader reader = new StreamReader("rk")) {
-                String line = reader.ReadLine();
-                Console.WriteLine(line);
-                return line;
-            }
-        } catch {
-            return null;
-        }
-    }
-
-    void StoreRK(string rk) {
-        Console.WriteLine("StoreRK");
-        using (StreamWriter writer = new StreamWriter("rk")) {
-            writer.WriteLine(rk);
-        }
-    }
-
     bool UploadFotolife(string filepath) {
-        string username, password;
-        using (StreamReader reader = new StreamReader("login")) {
-            username = reader.ReadLine();
-            password = reader.ReadLine();
-        }
-        string rk = RestoreRK();
-
-        if (rk == null) {
-            rk = LoginHatena(username, password);
-            StoreRK(rk);
-        } else {
-            this.cookieContainer.SetCookies(new Uri("http://f.hatena.ne.jp"), String.Format("rk={0}", rk));
-        }
-
-        Console.WriteLine("Logged in: rk=[{0}]", rk);
-
         const string BOUNDARY = "-----------------------------FOTOLIFEBOUNDARY";
 
-        System.Security.Cryptography.MD5 md5 = System.Security.Cryptography.MD5.Create();
-        byte[] md5hash = md5.ComputeHash(System.Text.Encoding.ASCII.GetBytes(rk));
+        string rk = LoginHatena(username, password);
+        byte[] md5hash = MD5.Create().ComputeHash(Encoding.ASCII.GetBytes(rk));
         string rkm = System.Convert.ToBase64String(md5hash).Replace("=", "");
-        Console.WriteLine(rkm);
 
         HttpWebRequest request = (HttpWebRequest)WebRequest.Create(String.Format(FOTOLIFE_POST_URL, username));
         request.Method = "POST";
         request.CookieContainer = this.cookieContainer;
-        request.AllowAutoRedirect = false;
 
         request.ContentType = String.Format("multipart/form-data; boundary={0}", BOUNDARY);
 
@@ -147,7 +117,17 @@ class CaptureFotolife : Form {
                 requestStreamWriter.Write(String.Format("--{0}--\r\n", BOUNDARY));
             }
 
-            request.GetResponse();
+            WebResponse res = request.GetResponse();
+            StreamReader reader = new StreamReader(res.GetResponseStream());
+
+            Regex regex = new Regex(@"check-(\d+)");
+            Match match = regex.Match(reader.ReadToEnd());
+
+            if (match.Success) {
+                Process.Start(String.Format("http://f.hatena.ne.jp/{0}/{1}", username, match.Groups[1]));
+            } else {
+                throw new System.Exception("Upload failed");
+            }
 
             return false;
         }
@@ -214,7 +194,15 @@ class CaptureFotolife : Form {
 
     protected override void OnPaintBackground(PaintEventArgs e) { }
 
-    static void Main() {
-        Application.Run(new CaptureFotolife());
+    static void Main(string[] args) {
+        if (args.Length < 2) {
+            MessageBox.Show("Usage: fotolife.exe username password", "CaptureFotolife", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        String username = args[0];
+        String password = args[1];
+
+        Application.Run(new CaptureFotolife(username, password));
     }
 }
